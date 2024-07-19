@@ -21,41 +21,33 @@ update_json() {
 }
 
 # Function to get yum package info
-# Function to get yum package info
 get_yum_info() {
   local package_name=$1
   local yum_output
 
   yum_output=$(yum info "$package_name" 2>&1)
-
-  if echo "$yum_output" | grep -i "error" > /dev/null; then
+  
+  if echo "$yum_output" | grep -i "error"; then
     echo "No information found for package: $package_name"
     update_json "$no_details_file" "$package_name" '"No matching packages to list"'
   else
-    # Extract information for the x86_64 architecture
-    local description summary license url architecture
-    architecture=$(echo "$yum_output" | awk '/^Name\s*:\s*'"$package_name"'$/,/^$/ {if ($1 == "Architecture:") {print $2; exit}}')
-    
-    if [[ "$architecture" == "x86_64" ]]; then
-      description=$(echo "$yum_output" | awk '/^Description/,/^From repo/ {if ($1 != "From") print}' | sed ':a;N;$!ba;s/\n/ /g' | xargs)
-      summary=$(echo "$yum_output" | awk '/^Name\s*:\s*'"$package_name"'$/,/^$/ {if ($1 == "Summary:") {print substr($0, index($0,$2))}}')
-      license=$(echo "$yum_output" | awk '/^Name\s*:\s*'"$package_name"'$/,/^$/ {if ($1 == "License:") {print substr($0, index($0,$2))}}')
-      url=$(echo "$yum_output" | awk '/^Name\s*:\s*'"$package_name"'$/,/^$/ {if ($1 == "URL:") {print substr($0, index($0,$2))}}')
+    local description summary license url
+    # description=$(echo "$yum_output" | grep  -m 1 "^Description" | cut -d: -f2- | xargs)
+    description=$(echo "$yum_output" | awk '/^Description/ {flag=1} /^Summary|License/ {flag=0} flag {print}' | cut -d: -f2- |  sed ':a;N;$!ba;s/\n/ /g')                                                                                                                                                                                                                                                         
+    summary=$(echo "$yum_output" | grep -m 1 -E "^Summary" | cut -d: -f2- | xargs)
+    license=$(echo "$yum_output" | grep -m 1 -E "^License" | cut -d: -f2- | xargs)
+    url=$(echo "$yum_output" | grep -m 1 -E "^URL" | cut -d: -f2- | xargs)
 
-      info=$(jq -n \
-        --arg description "$description" \
-        --arg summary "$summary" \
-        --arg license "$license" \
-        --arg url "$url" \
-        '{description: $description, summary: $summary, license: $license, URL: $url}')
+    info=$(jq -n \
+      --arg description "$description" \
+      --arg summary "$summary" \
+      --arg license "$license" \
+      --arg url "$url" \
+      '{description: $description, summary: $summary, license: $license, URL: $url}')
 
-      update_json "$output_file" "$package_name" "$info"
-    else
-      echo "No x86_64 architecture found for package: $package_name"
-      update_json "$no_details_file" "$package_name" '"No matching packages with architecture x86_64"'
-    fi
+    update_json "$output_file" "$package_name" "$info"
   fi
-}
+} 
 
 
 # Function to get pip package info
@@ -66,17 +58,18 @@ get_pip_info() {
 
   pip_output=$(pip show "$actual_package_name" 2>&1)
 
-  if echo "$pip_output" | grep -i "WARNING: Package(s) not found:" > /dev/null; then
+  if echo "$pip_output" | grep -i "WARNING: Package(s) not found:"; then
     get_pypi_info "$package_name" "$actual_package_name"
   else
     local description summary license url
-    description=$(echo "$pip_output" | grep -E "^Summary" | cut -d: -f2- | xargs)
+    description=$(echo "$pip_output" | grep -E "^Description" | xargs)
+    summary=$(echo "$pip_output" | grep -E "^Summary" | xargs)
     license=$(echo "$pip_output" | grep -E "^License" | cut -d: -f2- | xargs)
     url=$(echo "$pip_output" | grep -E "^Home-page" | cut -d: -f2- | xargs)
 
     info=$(jq -n \
       --arg description "$description" \
-      --arg summary "$description" \
+      --arg summary "$summary" \
       --arg license "$license" \
       --arg url "$url" \
       '{description: $description, summary: $summary, license: $license, URL: $url}')
@@ -84,7 +77,6 @@ get_pip_info() {
     update_json "$pypi_details_file" "$actual_package_name" "$info"
   fi
 }
-
 # Function to get PyPi package info using curl
 get_pypi_info() {
   local package_name=$1
@@ -93,12 +85,12 @@ get_pypi_info() {
 
   pypi_output=$(curl -s "https://pypi.org/pypi/$actual_package_name/json")
 
-  if echo "$pypi_output" | grep -i "error" > /dev/null; then
+  if echo "$pypi_output" | grep -i '"message": "Not Found"'; then
     echo "No information found for package: $package_name"
     update_json "$no_details_file" "$package_name" '"No matching packages to list"'
   else
     local description summary license url
-    description=$(echo "$pypi_output" | jq -r '.info.description')
+    description=$(echo "$pypi_output" | jq -r '.info.description' | sed ':a;N;$!ba;s/\n/ /g')
     summary=$(echo "$pypi_output" | jq -r '.info.summary')
     license=$(echo "$pypi_output" | jq -r '.info.license')
     url=$(echo "$pypi_output" | jq -r '.info.home_page')
@@ -109,10 +101,10 @@ get_pypi_info() {
       --arg license "$license" \
       --arg url "$url" \
       '{description: $description, summary: $summary, license: $license, URL: $url}')
-
     update_json "$pypi_details_file" "$package_name" "$info"
   fi
 }
+
 
 # Loop through the package names and run 'yum info' or 'pip show' for each package
 jq -r 'keys[]' "$json_file" | while read -r package_name; do
