@@ -5,11 +5,13 @@ json_file="cmssw-ib.json"
 output_file="yum_info_results.json"
 no_details_file="no_details.json"
 pypi_details_file="pypi_info_results.json"
+pip_details_file="pip_details_file.json"
 
 # Initialize empty JSON objects for output files
-echo "{}" > "$output_file"
+echo "{}" > "$output_file"                                                                  
 echo "{}" > "$no_details_file"
 echo "{}" > "$pypi_details_file"
+echo "{}" > "$pip_details_file"
 
 # Function to update JSON file with package information
 update_json() {
@@ -74,7 +76,7 @@ get_pip_info() {
       --arg url "$url" \
       '{description: $description, summary: $summary, license: $license, URL: $url}')
 
-    update_json "$pypi_details_file" "$actual_package_name" "$info"
+    update_json "$pip_details_file" "$actual_package_name" "$info"
   fi
 }
 # Function to get PyPi package info using curl
