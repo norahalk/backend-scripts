@@ -34,9 +34,8 @@ get_yum_info() {
     update_json "$no_details_file" "$package_name" '"No matching packages to list"'
   else
     local description summary license url
-    # description=$(echo "$yum_output" | grep  -m 1 "^Description" | cut -d: -f2- | xargs)
-    description=$(echo "$yum_output" | awk '/^Description/ {flag=1} /^Summary|License/ {flag=0} flag {print}' | cut -d: -f2- |  sed ':a;N;$!ba;s/\n/ /g')                                                                                                                                                                                                                                                         
-    summary=$(echo "$yum_output" | grep -m 1 -E "^Summary" | cut -d: -f2- | xargs)
+    description=$(echo "$yum_output" | awk '/^Description/ {flag=1} /^Summary|License/ {flag=0} flag {print}' | cut -d: -f2- | xargs)                                                                                                                                                                                                                                                         
+    summary=$(echo "$yum_output" | grep -m cmssw-ib-test.json1 -E "^Summary" | cut -d: -f2- | xargs)
     license=$(echo "$yum_output" | grep -m 1 -E "^License" | cut -d: -f2- | xargs)
     url=$(echo "$yum_output" | grep -m 1 -E "^URL" | cut -d: -f2- | xargs)
 
@@ -63,18 +62,16 @@ get_pip_info() {
   if echo "$pip_output" | grep -i "WARNING: Package(s) not found:"; then
     get_pypi_info "$package_name" "$actual_package_name"
   else
-    local description summary license url
-    description=$(echo "$pip_output" | grep -E "^Description" | xargs)
-    summary=$(echo "$pip_output" | grep -E "^Summary" | xargs)
+    local  summary license url
+    summary=$(echo "$pip_output" | grep -E "^Summary" |  cut -d: -f2- | xargs)
     license=$(echo "$pip_output" | grep -E "^License" | cut -d: -f2- | xargs)
     url=$(echo "$pip_output" | grep -E "^Home-page" | cut -d: -f2- | xargs)
 
     info=$(jq -n \
-      --arg description "$description" \
       --arg summary "$summary" \
       --arg license "$license" \
       --arg url "$url" \
-      '{description: $description, summary: $summary, license: $license, URL: $url}')
+      '{ summary: $summary, license: $license, URL: $url}')
 
     update_json "$pip_details_file" "$actual_package_name" "$info"
   fi
