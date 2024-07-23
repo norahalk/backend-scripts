@@ -1,9 +1,7 @@
 import os
 import re
 from collections import defaultdict
-import subprocess
-from flask import Flask, jsonify, send_from_directory
-from flask_cors import CORS
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 
@@ -50,50 +48,5 @@ def get_folders():
     
     return jsonify(data)
 
-
-app = Flask(__name__)
-CORS(app)
-
-@app.route('/run-script', methods=['GET'])
-def run_script():
-    try:
-        result = subprocess.run(['./script.sh'], capture_output=True, text=True, check=True)
-        return jsonify({"message": "Script executed successfully"}), 200
-    except subprocess.CalledProcessError as e:
-        return jsonify({"error": str(e), "output": e.output}), 500
-
-@app.route('/results/<filename>', methods=['GET'])
-def get_results(filename):
-    directory = os.getcwd()  # Adjust if results are stored in a different directory
-    return send_from_directory(directory, filename)
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
-
-import os
-import subprocess
-from flask import Flask, jsonify, send_from_directory
-from flask_cors import CORS
-
-app = Flask(__name__)
-CORS(app)
-
-@app.route('/run-script', methods=['GET'])
-def run_script():
-    try:
-        result = subprocess.run(['./script.sh'], capture_output=True, text=True, check=True)
-        return jsonify({"message": "Script executed successfully"}), 200
-    except subprocess.CalledProcessError as e:
-        return jsonify({"error": str(e), "output": e.output}), 500
-
-@app.route('/results/<filename>', methods=['GET'])
-def get_results(filename):
-    directory = os.getcwd()  # Adjust if results are stored in a different directory
-    return send_from_directory(directory, filename)
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
-
-
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True)
