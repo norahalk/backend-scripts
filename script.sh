@@ -30,8 +30,8 @@ get_yum_info() {
   yum_output=$(yum info "$package_name" 2>&1)
   
   if echo "$yum_output" | grep -i "error"; then
-    echo "Yum - No information found for package: $package_name"
-    get_pip_info $"package_name" $"actual_package_name"
+    echo "No information found for package: $package_name"
+    update_json "$no_details_file" "$package_name" '"No matching packages to list"'
   else
     local description summary license url
     description=$(echo "$yum_output" | awk '/^Description/ {flag=1} /^Summary|License/ {flag=0} flag {print}' | cut -d: -f2- | xargs)                                                                                                                                                                                                                                                         
@@ -85,8 +85,8 @@ get_pypi_info() {
   pypi_output=$(curl -s "https://pypi.org/pypi/$actual_package_name/json")
 
   if echo "$pypi_output" | grep -i '"message": "Not Found"'; then
-    echo "PyPi - No information found for package: $package_name"
-    update_json "$no_details_file" "$package_name" '"PyPi - No matching packages to list"'
+    echo "No information found for package: $package_name"
+    update_json "$no_details_file" "$package_name" '"No matching packages to list"'
   else
     local description summary license url
     description=$(echo "$pypi_output" | jq -r '.info.description' | sed ':a;N;$!ba;s/\n/ /g')
@@ -114,10 +114,9 @@ jq -r 'keys[]' "$json_file" | while read -r package_name; do
     actual_package_name=${package_name#py3-}
     get_pip_info "$package_name" "$actual_package_name"
  elif [[ "$package_name" == py* ]]; then
-    actual_package_name=${package_name#py}
+    actual_package_name=${actual_package_name#py}   
     get_pip_info "$package_name" "$actual_package_name"
   else
-    actual_package_name=${package_name#py}
-    get_yum_info "$package_name" $"actual_package_name#py"
+    get_yum_info "$package_name"
   fi
 done
