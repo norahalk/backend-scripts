@@ -31,7 +31,8 @@ get_yum_info() {
   
   if echo "$yum_output" | grep -i "error"; then
     echo "No information found for package: $package_name"
-    update_json "$no_details_file" "$package_name" '"No matching packages to list"'
+    get_pip_info "$package_name" "$package_name"
+    # update_json "$no_details_file" "$package_name" '"No matching packages to list"'
   else
     local description summary license url
     description=$(echo "$yum_output" | awk '/^Description/ {flag=1} /^Summary|License/ {flag=0} flag {print}' | cut -d: -f2- | xargs)                                                                                                                                                                                                                                                         
