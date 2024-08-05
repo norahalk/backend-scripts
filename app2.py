@@ -50,9 +50,10 @@ def extract_packages(package_file):
 
 # Recursive function to find the cmssw-ib.json file in deeply nested directories
 def find_cmssw_ib_file(start_dir):
-    for root, dirs, files in os.walk(start_dir):
-        if "cmssw-ib.json" in files:
-            return os.path.join(root, "cmssw-ib.json")
+    for root, dirs, files in os.walk("../Desktop/package-info-viewer"):
+        for file in files:
+            if file.endswith(".json"):
+               return os.path.join(root, file)
     return None
 
 # Function that creates the subfolders of each parsed variable received
@@ -103,7 +104,7 @@ def extract_and_parse_folders(directory):
 # Function that takes the folders, sends them to be parsed then send them to the react frontend
 @app.route("/folders", methods=["GET"])
 def get_folders():
-    directory = "../Desktop/IBs"
+    directory = "../Desktop/package-info-viewer"
     parsed_folders = extract_and_parse_folders(directory)
 
     # Organize data for easier consumption by the frontend
