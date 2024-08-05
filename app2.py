@@ -47,7 +47,6 @@ def extract_packages(package_file):
     
     return package_dict
 
-
 # Recursive function to find the cmssw-ib.json file in deeply nested directories
 def find_cmssw_ib_file(start_dir):
     for root, dirs, files in os.walk("../Desktop/package-info-viewer"):
@@ -75,7 +74,6 @@ def extract_and_parse_folders(directory):
                         if os.path.isdir(sub_item_path):
                             architectures.append(sub_item)
                             package_file = find_cmssw_ib_file(sub_item_path)
-                            #package_file = os.path.join(sub_item_path, "cmssw-ib.json")
                             if package_file:
                                 packages = extract_packages(package_file)
                                 release_id = f"{version}_{flavor}_{date}_{sub_item}"
@@ -97,17 +95,13 @@ def extract_and_parse_folders(directory):
 
     return parsed_folders
 
-# Example usage
-# parsed_folders = extract_and_parse_folders('/path/to/directory', 'output.txt')
-
-
 # Function that takes the folders, sends them to be parsed then send them to the react frontend
 @app.route("/folders", methods=["GET"])
 def get_folders():
     directory = "../Desktop/package-info-viewer"
     parsed_folders = extract_and_parse_folders(directory)
 
-    # Organize data for easier consumption by the frontend
+    # Organize data for easier consumption by the react.js frontend
     data = {}
     for version, flavor_date_arch_list in parsed_folders.items():
         dates = defaultdict(lambda: defaultdict(list))
