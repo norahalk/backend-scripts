@@ -43,27 +43,30 @@ def extract_and_parse_folders(directory):
             parsed_result = parse_folder_name(item)
             if parsed_result:
                 version, flavor, date = parsed_result
-                architectures = []
                 for sub_item in os.listdir(item_path):
                     sub_item_path = os.path.join(item_path, sub_item)
                     if os.path.isdir(sub_item_path):
-                        architectures.append(sub_item)
-                        package_file = os.path.join(sub_item_path, 'cmssw-ib.json')
-                        if os.path.exists(package_file):
-                            packages = extract_packages(package_file)
-                            release_id = f"{version}_{flavor}_{date}_{sub_item}"
-                            all_packages_info.append({
-                                "release_cycle": version,
-                                "flavor": flavor,
-                                "date": date,
-                                "architecture": sub_item,
-                                "packages": packages,
-                                "timestamp": current_timestamp,
-                                "ID": release_id
-                            })
+                        for sub_sub_item in os.listdir(sub_item_path):
+                            sub_sub_item_path = os.path.join(sub_item_path, sub_sub_item)
+                            if os.path.isdir(sub_sub_item_path):
+                                deps_folder = os.path.join(sub_sub_item_path, 'DEPS')
+                                if os.path.isdir(deps_folder):
+                                    package_file = os.path.join(deps_folder, 'cmssw-ib.json')
+                                    if os.path.exists(package_file):
+                                        packages = extract_packages(package_file)
+                                        release_id = f"{version}_{flavor}_{date}_{sub_item}"
+                                        all_packages_info.append({
+                                            "release_cycle": version,
+                                            "flavor": flavor,
+                                            "date": date,
+                                            "architecture": sub_item,
+                                            "packages": packages,
+                                            "timestamp": current_timestamp,
+                                            "ID": release_id
+                                        })
                 if version not in parsed_folders:
                     parsed_folders[version] = []
-                parsed_folders[version].append((flavor, date, architectures))
+                parsed_folders[version].append((flavor, date, [sub_item]))
 
     # Save all packages information to a JSON file
     with open('all_packages_info.json', 'w') as f:
@@ -91,7 +94,7 @@ def get_folders():
 @app.route('/packages/<ib>/<date>/<flavor>/<architecture>', methods=['GET'])
 def get_packages(ib, date, flavor, architecture):
     directory = f'../Desktop/package-info-viewer/{ib}_{flavor}_{date}/{architecture}'
-    package_file = os.path.join(directory, 'cmssw-ib.json')
+    package_file = os.path.join(directory, 'DEPS', 'cmssw-ib.json')
     if os.path.exists(package_file):
         with open(package_file) as f:
             packages = json.load(f)
