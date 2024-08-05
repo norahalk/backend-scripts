@@ -47,29 +47,13 @@ def extract_packages(package_file):
     
     return package_dict
 
-import os
-import json
-import time
 
-# Function that reads package names and versions from a JSON file
-def extract_packages(package_file):
-    with open(package_file, "r") as f:
-        package_data = json.load(f)
-    
-    # Dictionary to store package name and version pairs
-    package_dict = {}
-    
-    for package_key in package_data:
-        package_info = package_data[package_key]
-        package_name = package_info['name']
-        full_version = package_info['version']
-        
-        # Split the version to remove the checksum
-        version_without_checksum = full_version.split('-')[0]
-        
-        package_dict[package_name] = version_without_checksum
-    
-    return package_dict
+# Recursive function to find the cmssw-ib.json file in deeply nested directories
+def find_cmssw_ib_file(start_dir):
+    for root, dirs, files in os.walk(start_dir):
+        if "cmssw-ib.json" in files:
+            return os.path.join(root, "cmssw-ib.json")
+    return None
 
 # Function that creates the subfolders of each parsed variable received
 def extract_and_parse_folders(directory):
@@ -89,8 +73,9 @@ def extract_and_parse_folders(directory):
                         sub_item_path = os.path.join(item_path, sub_item)
                         if os.path.isdir(sub_item_path):
                             architectures.append(sub_item)
-                            package_file = os.path.join(sub_item_path, "cmssw-ib.json")
-                            if os.path.exists(package_file):
+                            package_file = find_cmssw_ib_file(sub_item_path)
+                            #package_file = os.path.join(sub_item_path, "cmssw-ib.json")
+                            if package_file:
                                 packages = extract_packages(package_file)
                                 release_id = f"{version}_{flavor}_{date}_{sub_item}"
                                 result = {
@@ -113,7 +98,6 @@ def extract_and_parse_folders(directory):
 
 # Example usage
 # parsed_folders = extract_and_parse_folders('/path/to/directory', 'output.txt')
-
 
 
 # Function that takes the folders, sends them to be parsed then send them to the react frontend
