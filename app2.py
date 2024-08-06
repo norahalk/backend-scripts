@@ -57,44 +57,34 @@ def find_cmssw_ib_file(start_dir):
 
 # Function that creates the subfolders of each parsed variable received
 def extract_and_parse_folders(directory):
-    output_file = "results.txt"
     parsed_folders = {}
     current_timestamp = time.time() * 1000
 
-    with open(output_file, "w") as file:
-        for item in os.listdir(directory):
-            item_path = os.path.join(directory, item)
-            if os.path.isdir(item_path):
-                parsed_result = parse_folder_name(item)
-                if parsed_result:
-                    version, flavor, date = parsed_result
-                    architectures = []
-                    for sub_item in os.listdir(item_path):
-                        sub_item_path = os.path.join(item_path, sub_item)
-                        if os.path.isdir(sub_item_path):
-                            architectures.append(sub_item)
-                            package_file = find_cmssw_ib_file(sub_item_path)
-                            if package_file:
-                                packages = extract_packages(package_file)
-                                release_id = f"{version}_{flavor}_{date}_{sub_item}"
-                                result = {
-                                    release_id: {
-                                        "release_cycle": version,
-                                        "flavor": flavor,
-                                        "date": date,
-                                        "architecture": sub_item,
-                                        "packages": packages,
-                                        "timestamp": current_timestamp,
-                                    }
-                                }
-                                file.write(json.dumps(result) + "\n")
+    result = {}  # Dictionary to hold all results
 
-                    if version not in parsed_folders:
-                        parsed_folders[version] = []
-                    parsed_folders[version].append((flavor, date, architectures))
+    for item in os.listdir(directory):
+        item_path = os.path.join(directory, item)
+        if os.path.isdir(item_path):
+            parsed_result = parse_folder_name(item)
+            if parsed_result:
+                version, flavor, date = parsed_result
+                for sub_item in os.listdir(item_path):
+                    sub_item_path = os.path.join(item_path, sub_item)
+                    if os.path.isdir(sub_item_path):
+                        package_file = find_cmssw_ib_file(sub_item_path)
+                        if package_file:
+                            packages = extract_packages(package_file)
+                            release_id = f"{version}_{flavor}_{date}_{sub_item}"
+                            result[release_id] = {
+                                "release_cycle": version,
+                                "flavor": flavor,
+                                "date": date,
+                                "architecture": sub_item,
+                                "packages": packages,
+                                "timestamp": current_timestamp,
+                            }
 
-    return parsed_folders
-
+    return result
 # Function that takes the folders, sends them to be parsed then send them to the react frontend
 @app.route("/folders", methods=["GET"])
 def get_folders():
