@@ -97,12 +97,14 @@ def get_folders():
     parsed_folders = extract_and_parse_folders(directory)
 
     # Organize data for easier consumption by the react.js frontend
-    data = {}
-    for version, flavor_date_arch_list in parsed_folders.items():
-        dates = defaultdict(lambda: defaultdict(list))
-        for flavor, date, architectures in flavor_date_arch_list:
-            dates[date][flavor] = architectures
-        data[version] = dates
+    data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+
+    for release_id, details in parsed_folders.items():
+        version = details['release_cycle']
+        flavor = details['flavor']
+        date = details['date']
+        architecture = details['architecture']
+        data[version][date][flavor].append(architecture)
 
     return jsonify(data)
 
