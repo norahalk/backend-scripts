@@ -55,8 +55,8 @@ def find_cmssw_ib_file(start_dir):
                return os.path.join(root, file)
     return None
 
-# Function that creates the subfolders of each parsed variable received
 def extract_and_parse_folders(directory):
+    output_file = "results.txt"
     parsed_folders = {}
     current_timestamp = time.time() * 1000
 
@@ -84,7 +84,12 @@ def extract_and_parse_folders(directory):
                                 "timestamp": current_timestamp,
                             }
 
+    with open(output_file, "w") as file:
+        json.dump(result, file, indent=4)
+
     return result
+
+
 # Function that takes the folders, sends them to be parsed then send them to the react frontend
 @app.route("/folders", methods=["GET"])
 def get_folders():
