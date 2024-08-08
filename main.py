@@ -110,6 +110,36 @@ def extract_parse_index_folders(directory):
 
     return result
 
+def extract_and_parse_folders(directory):
+    result = {}  # Dictionary to hold all results
+
+    for item in os.listdir(directory):
+        item_path = os.path.join(directory, item)
+        if os.path.isdir(item_path):
+            parsed_result = parse_folder_name(item)
+            if parsed_result:
+                version, flavor, date = parsed_result
+                for sub_item in os.listdir(item_path):
+                    sub_item_path = os.path.join(item_path, sub_item)
+                    if os.path.isdir(sub_item_path):
+                        package_file = find_cmssw_ib_file(sub_item_path)
+                        if package_file:
+                            packages = extract_packages(package_file)
+                            IB_id = f"{version}_{flavor}_{date}_{sub_item}"
+
+                            current_timestamp = datetime.now()
+
+                            result[IB_id] = {
+                                "version": version,
+                                "flavor": flavor,
+                                "date": date,
+                                "architecture": sub_item,
+                                "packages": packages,
+                                "@timestamp": current_timestamp,
+                            }
+
+    return result
+
 
 # Function that takes the folders, sends them to be parsed then send them to the react frontend
 @app.route("/folders", methods=["GET"])
@@ -120,8 +150,8 @@ def get_folders():
     # Organize data for easier consumption by the react.js frontend
     data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
-    for release_id, details in parsed_folders.items():
-        version = details["release_cycle"]
+    for IB_id, details in parsed_folders.items():
+        version = details["version"]
         flavor = details["flavor"]
         date = details["date"]
         architecture = details["architecture"]
@@ -162,9 +192,9 @@ def search_ibs_index():
 # All stored in a Python dictionary
 def parser():
     directory = "../Desktop/package-info-viewer"
-    # extract_parse_index_folders(directory)
+    extract_and_parse_folders(directory)
 
 
 if __name__ == "__main__":
-    # parser()
+    parser()
     app.run(debug=True)
