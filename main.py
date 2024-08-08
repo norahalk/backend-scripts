@@ -64,7 +64,7 @@ def find_cmssw_ib_file(start_dir):
 
 def extract_parse_index_folders(directory):
     result = {}  # Dictionary to hold all results
-
+    output_file ="ibs_summary.json"
     for item in os.listdir(directory):
         item_path = os.path.join(directory, item)
         if os.path.isdir(item_path):
@@ -80,7 +80,8 @@ def extract_parse_index_folders(directory):
                             packages = extract_packages(package_file)
                             IB_id = f"{version}_{flavor}_{date}_{sub_item}"
 
-                            current_timestamp = datetime.now()
+                            current_timestamp = datetime.now().isoformat()
+                            # current_timestamp = dt.strftime("%Y-%m-%d %H:%M:%S") 
 
                             result[IB_id] = {
                                 "version": version,
@@ -104,9 +105,11 @@ def extract_parse_index_folders(directory):
                             # resp = client.search(
                             #     index="cmssw-ibs", query={"match_all": {}}
                             # )
-                            print("Got {} hits:".format(resp["hits"]["total"]["value"]))
+                            # print("Got {} hits:".format(resp["hits"]["total"]["value"]))
                             # for hit in resp["hits"]["hits"]:
                             # print("{release_cycle}".format(**hit["_source"]))
+    with open(output_file, 'w') as f:
+        json.dump(result, f, indent=4)
 
     return result
 
@@ -192,7 +195,8 @@ def search_ibs_index():
 # All stored in a Python dictionary
 def parser():
     directory = "../Desktop/package-info-viewer"
-    extract_and_parse_folders(directory)
+    # extract_and_parse_folders(directory)
+    extract_parse_index_folders(directory)
 
 
 if __name__ == "__main__":
