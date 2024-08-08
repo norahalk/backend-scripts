@@ -101,9 +101,9 @@ def extract_parse_index_folders(directory):
 
                             client.indices.refresh(index="cmssw-ibs")
 
-                            resp = client.search(
-                                index="cmssw-ibs", query={"match_all": {}}
-                            )
+                            # resp = client.search(
+                            #     index="cmssw-ibs", query={"match_all": {}}
+                            # )
                             print("Got {} hits:".format(resp["hits"]["total"]["value"]))
                             # for hit in resp["hits"]["hits"]:
                             # print("{release_cycle}".format(**hit["_source"]))
@@ -143,7 +143,7 @@ def get_packages(ib, date, flavor, architecture):
 
 # Function to search the IBs index on ElasticSearch - query obtained from frontend POST request
 @app.route('/search', methods=['POST'])
-def search_ib_index():
+def search_ibs_index():
     data = request.get_json()
     query = data.get('query', '')
 
