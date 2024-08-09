@@ -20,34 +20,39 @@ client.indices.put_settings(
 
 def parse_path(path):
     # Extract Architecture using regex
-    architecture_pattern = r"/cms/([^/]+)/"
-
+    architecture_pattern = r'/cms/([^/]+)/'
+    
     # The Version pattern is after the last "/" and before ".json"
     # We want to capture the full version including suffixes like HeavyIon
-    version_pattern = r"/([^/]+)\.json$"
-
+    version_pattern = r'/([^/]+)\.json$'
+    
     # Find Architecture
     architecture_match = re.search(architecture_pattern, path)
     if architecture_match:
         architecture = architecture_match.group(1)
     else:
         architecture = "Not found"
-
+    
     # Find and refine Version
     version_match = re.search(version_pattern, path)
     if version_match:
         full_version = version_match.group(1)
-        # Extract the CMSSW version part and keep any suffixes
-        version_match = re.search(r"(CMSSW_\d+_\d+(_\d+)*(_\w+)*)", full_version)
+        # Extract the CMSSW version part and any suffix
+        version_match = re.search(r'(CMSSW_\d+_\d+(_\d+)*)(_(.*))?', full_version)
         if version_match:
-            version = version_match.group(1)
+            release_cycle = version_match.group(1)
+            flavor = version_match.group(4) if version_match.group(4) else ''
+            release_name = f"{release_cycle}_{flavor}" if flavor else release_cycle
         else:
-            version = "Not found"
+            release_cycle = "Not found"
+            flavor = ''
+            release_name = "Not found"
     else:
-        version = "Not found"
-
-    return architecture, version
-
+        release_cycle = "Not found"
+        flavor = ''
+        release_name = "Not found"
+    
+    return architecture, release_name, release_cycle, flavor
 
 def extract_packages(package_file):
     with open(package_file, "r") as f:
@@ -68,72 +73,67 @@ def extract_packages(package_file):
 
     return package_dict
 
-
 def process_directory(directory):
     releases_info = {}
-    output_file = "releases_output.json"
+    
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith(".json"):
+            if file.endswith('.json'):
                 file_path = os.path.join(root, file)
-
-                # Extract architecture and version from path
-                architecture, version = parse_path(file_path)
-
-                if architecture != "Not found" and version != "Not found":
+                
+                # Extract architecture, release_name, release_cycle, and flavor from path
+                architecture, release_name, release_cycle, flavor = parse_path(file_path)
+                
+                if architecture != "Not found" and release_name != "Not found":
                     # Extract packages from JSON file
                     packages = extract_packages(file_path)
+                    
+                    release_id = f"{release_name}_{architecture}"
 
-                    # Create a combined key for version and architecture
-                    release_id = f"{version}_{architecture}"
                     current_timestamp = datetime.now().isoformat()
 
                     # Store the data in the dictionary
                     releases_info[release_id] = {
-                        "version": version,
+                        "release_name": release_name,
+                        "flavor": flavor,
+                        "release_cycle": release_cycle,
                         "architecture": architecture,
-                        "packages": packages,
-                        "@timestamp": current_timestamp,
+                        "timestamp": current_timestamp,
+                        "packages": packages
                     }
-                    # doc = releases_info
-                    # resp = client.index(
-                    #     index="cmssw-releases", id=release_id, document=doc[release_id]
-                    # )
-                    # print(resp["result"])
 
-                    # resp = client.get(index="cmssw-releases", id=release_id)
-                    # print(resp["_source"])
+    # Save the releases_info to a JSON file
+    # save_to_json(releases_info,"releases-info.json")
 
-                    # client.indices.refresh(index="cmssw-releases")
-    #write results to a json file
-    save_to_json(releases_info,output_file)
     return releases_info
 
 def process_and_index_directory(directory):
     releases_info = {}
-
+    
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith(".json"):
+            if file.endswith('.json'):
                 file_path = os.path.join(root, file)
-
-                # Extract architecture and version from path
-                architecture, version = parse_path(file_path)
-
-                if architecture != "Not found" and version != "Not found":
+                
+                # Extract architecture, release_name, release_cycle, and flavor from path
+                architecture, release_name, release_cycle, flavor = parse_path(file_path)
+                
+                if architecture != "Not found" and release_name != "Not found":
                     # Extract packages from JSON file
                     packages = extract_packages(file_path)
+                    
+                    release_id = f"{release_name}_{architecture}"
 
-                    # Create a combined key for version and architecture
-                    release_id = f"{version}_{architecture}"
                     current_timestamp = datetime.now().isoformat()
 
                     # Store the data in the dictionary
                     releases_info[release_id] = {
-                        "version": version,
+                        "release_name": release_name,
+                        "flavor": flavor,
+                        "release_cycle": release_cycle,
                         "architecture": architecture,
-                        "packages": packages,
-                        "@timestamp": current_timestamp,
+                        "timestamp": current_timestamp,
+                        "packages": packages
                     }
                     doc = releases_info
                     resp = client.index(
@@ -147,6 +147,7 @@ def process_and_index_directory(directory):
                     client.indices.refresh(index="cmssw-releases")
 
     return releases_info
+
 # Function to search the IBs index on ElasticSearch - query obtained from frontend POST request
 @app.route("/search", methods=["POST"])
 def search_releases_index():
@@ -174,7 +175,9 @@ if __name__ == "__main__":
 
     # Process the directory
     # releases_info = process_directory(directory)
-    process_directory(directory)
+    # process_directory(directory)
+    process_and_index_directory(directory)
+
     app.run(debug=True)
 
     # Save the results to a new JSON file
