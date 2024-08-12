@@ -324,7 +324,7 @@ def search_releases_index():
 # Release name and version as key/value pairs, other fields are extra labeled fields.
 # All stored in a Python dictionary
 def parser():
-    directory = "../Desktoppackage-info-viewer"
+    directory = "../Desktop/package-info-viewer"
     extract_and_parse_folders(directory)
     # extract_parse_index_folders(directory)
 
