@@ -23,7 +23,6 @@ def parse_path(path):
     architecture_pattern = r'/cms/([^/]+)/'
     
     # The Version pattern is after the last "/" and before ".json"
-    # We want to capture the full version including suffixes like HeavyIon
     version_pattern = r'/([^/]+)\.json$'
     
     # Find Architecture
@@ -101,10 +100,6 @@ def process_directory(directory):
                         "timestamp": current_timestamp,
                         "packages": packages
                     }
-
-    # Save the releases_info to a JSON file
-    # save_to_json(releases_info,"releases-info.json")
-
     return releases_info
 
 def process_and_index_directory(directory):
@@ -149,7 +144,7 @@ def process_and_index_directory(directory):
     return releases_info
 
 # Function to search the IBs index on ElasticSearch - query obtained from frontend POST request
-@app.route("/search", methods=["POST"])
+@app.route("/searchReleases", methods=["POST"])
 def search_releases_index():
     data = request.get_json()
     query = data.get("query", "")
@@ -163,11 +158,9 @@ def search_releases_index():
 
     return jsonify(results)
 
-
 def save_to_json(data, output_file):
     with open(output_file, "w") as f:
         json.dump(data, f, indent=4)
-
 
 if __name__ == "__main__":
     # Directory to search
@@ -175,8 +168,8 @@ if __name__ == "__main__":
 
     # Process the directory
     # releases_info = process_directory(directory)
-    # process_directory(directory)
-    process_and_index_directory(directory)
+    process_directory(directory)
+    # process_and_index_directory(directory)
 
     app.run(debug=True)
 

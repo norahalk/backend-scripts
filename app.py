@@ -59,7 +59,7 @@ def extract_packages(package_file):
 
 # Recursive function to find the cmssw-ib.json file in deeply nested directories
 def find_cmssw_ib_file(start_dir):
-    for root, dirs, files in os.walk("../Desktop/package-info-viewer"):
+    for root, dirs, files in os.walk("../Desktoppackage-info-viewer"):
         for file in files:
             if file.endswith(".json"):
                 return os.path.join(root, file)
@@ -138,7 +138,7 @@ def extract_and_parse_folders(directory):
 # Function that takes the folders, sends them to be parsed then send them to the react frontend
 @app.route("/folders", methods=["GET"])
 def get_folders():
-    directory = "../Desktop/package-info-viewer"
+    directory = "../Desktoppackage-info-viewer"
     parsed_folders = extract_and_parse_folders(directory)
 
     # Organize data for easier consumption by the react.js frontend
@@ -157,7 +157,7 @@ def get_folders():
 # Function to get the packages from the cmssw-ib JSON file for each IB
 @app.route("/packages/<ib>/<date>/<flavor>/<architecture>", methods=["GET"])
 def get_packages(ib, date, flavor, architecture):
-    directory = f"../Desktop/package-info-viewer/{ib}_{flavor}_{date}/{architecture}"
+    directory = f"../Desktoppackage-info-viewer/{ib}_{flavor}_{date}/{architecture}"
     package_file = os.path.join(directory, "cmssw-ib.json")
     if os.path.exists(package_file):
         with open(package_file) as f:
@@ -185,7 +185,6 @@ def parse_path(path):
     architecture_pattern = r'/cms/([^/]+)/'
     
     # The Version pattern is after the last "/" and before ".json"
-    # We want to capture the full version including suffixes like HeavyIon
     version_pattern = r'/([^/]+)\.json$'
     
     # Find Architecture
@@ -263,10 +262,6 @@ def process_directory(directory):
                         "timestamp": current_timestamp,
                         "packages": packages
                     }
-
-    # Save the releases_info to a JSON file
-    # save_to_json(releases_info,"releases-info.json")
-
     return releases_info
 
 def process_and_index_directory(directory):
@@ -309,7 +304,6 @@ def process_and_index_directory(directory):
                     client.indices.refresh(index="cmssw-releases")
 
     return releases_info
-
 # Function to search the releases index on ElasticSearch - query obtained from frontend POST request
 @app.route("/searchReleases", methods=["POST"])
 def search_releases_index():
@@ -330,7 +324,7 @@ def search_releases_index():
 # Release name and version as key/value pairs, other fields are extra labeled fields.
 # All stored in a Python dictionary
 def parser():
-    directory = "../Desktop/package-info-viewer"
+    directory = "../Desktoppackage-info-viewer"
     extract_and_parse_folders(directory)
     # extract_parse_index_folders(directory)
 
