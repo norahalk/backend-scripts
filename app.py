@@ -59,7 +59,7 @@ def extract_packages(package_file):
 
 # Recursive function to find the cmssw-ib.json file in deeply nested directories
 def find_cmssw_ib_file(start_dir):
-    for root, dirs, files in os.walk("../Desktoppackage-info-viewer"):
+    for root, dirs, files in os.walk("../Desktop/package-info-viewer"):
         for file in files:
             if file.endswith(".json"):
                 return os.path.join(root, file)
@@ -138,7 +138,7 @@ def extract_and_parse_folders(directory):
 # Function that takes the folders, sends them to be parsed then send them to the react frontend
 @app.route("/folders", methods=["GET"])
 def get_folders():
-    directory = "../Desktoppackage-info-viewer"
+    directory = "../Desktop/package-info-viewer"
     parsed_folders = extract_and_parse_folders(directory)
 
     # Organize data for easier consumption by the react.js frontend
@@ -157,7 +157,7 @@ def get_folders():
 # Function to get the packages from the cmssw-ib JSON file for each IB
 @app.route("/packages/<ib>/<date>/<flavor>/<architecture>", methods=["GET"])
 def get_packages(ib, date, flavor, architecture):
-    directory = f"../Desktoppackage-info-viewer/{ib}_{flavor}_{date}/{architecture}"
+    directory = f"../Desktop/package-info-viewer/{ib}_{flavor}_{date}/{architecture}"
     package_file = os.path.join(directory, "cmssw-ib.json")
     if os.path.exists(package_file):
         with open(package_file) as f:
@@ -168,17 +168,18 @@ def get_packages(ib, date, flavor, architecture):
 # Function to search the IBs index on ElasticSearch - query obtained from frontend POST request
 @app.route('/searchIBs', methods=['POST'])
 def search_ibs_index():
-    data = request.get_json()
-    query = data.get('query', '')
 
     # Perform the search query on Elasticsearch
-    response = client.search(index="cmssw-ibs", q=query)
+    response = client.search(index="cmssw-ibs",size=10000,query={"match_all": {}})
     
-    # Extract the hits from the response
-    hits = response['hits']['hits']
-    results = [hit['_source'] for hit in hits]
+    # Extract the hits from the responsel
+    hits = response["hits"]["hits"]
+    results = [hit["_source"] for hit in hits]
+    print("Got {} hits:".format(response["hits"]["total"]["value"]))
+    for hit in response["hits"]["hits"]:
+        print("{architecture}".format(**hit["_source"]))
 
-    return jsonify(results)   
+    return jsonify(results)
 
 def parse_path(path):
     # Extract Architecture using regex
@@ -307,15 +308,16 @@ def process_and_index_directory(directory):
 # Function to search the releases index on ElasticSearch - query obtained from frontend POST request
 @app.route("/searchReleases", methods=["POST"])
 def search_releases_index():
-    data = request.get_json()
-    query = data.get("query", "")
 
     # Perform the search query on Elasticsearch
-    response = client.search(index="cmssw-releases", q=query)
-
-    # Extract the hits from the response
+    response = client.search(index="cmssw-releases",size=10000,query={"match_all": {}})
+    
+    # Extract the hits from the responsel
     hits = response["hits"]["hits"]
     results = [hit["_source"] for hit in hits]
+    print("Got {} hits:".format(response["hits"]["total"]["value"]))
+    for hit in response["hits"]["hits"]:
+        print("{release_name}".format(**hit["_source"]))
 
     return jsonify(results)
 
