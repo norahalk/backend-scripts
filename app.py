@@ -119,7 +119,7 @@ def extract_and_parse_IBs_folders(directory):
 @app.route("/folders", methods=["GET"])
 def get_folders():
     directory = "../Desktop/package-info-viewer"
-    parsed_folders = extract_and_parse_folders(directory)
+    parsed_folders = extract_and_parse_IBs_folders(directory)
 
     # Organize data for easier consumption by the react.js frontend
     data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
@@ -133,7 +133,6 @@ def get_folders():
 
     return jsonify(data)
 
-
 # Function to get the packages from the cmssw-ib JSON file for each IB
 @app.route("/packages/<ib>/<date>/<flavor>/<architecture>", methods=["GET"])
 def get_packages(ib, date, flavor, architecture):
@@ -146,12 +145,12 @@ def get_packages(ib, date, flavor, architecture):
     return jsonify([]), 404
 
 # Function to search the IBs index on ElasticSearch - query obtained from frontend POST request
-@app.route('/searchIBs', methods=['POST'])
+@app.route("/searchIBs", methods=["POST"])
 def search_ibs_index():
 
     # Perform the search query on Elasticsearch
-    response = client.search(index="cmssw-ibs",size=10000,query={"match_all": {}})
-    
+    response = client.search(index="cmssw-ibs", size=10000, query={"match_all": {}})
+
     # Extract the hits from the responsel
     hits = response["hits"]["hits"]
     results = [hit["_source"] for hit in hits]
@@ -163,37 +162,37 @@ def search_ibs_index():
 
 def parse_releases_path(path):
     # Extract Architecture using regex
-    architecture_pattern = r'/cms/([^/]+)/'
-    
+    architecture_pattern = r"/cms/([^/]+)/"
+
     # The Version pattern is after the last "/" and before ".json"
-    version_pattern = r'/([^/]+)\.json$'
-    
+    version_pattern = r"/([^/]+)\.json$"
+
     # Find Architecture
     architecture_match = re.search(architecture_pattern, path)
     if architecture_match:
         architecture = architecture_match.group(1)
     else:
         architecture = "Not found"
-    
+
     # Find and refine Version
     version_match = re.search(version_pattern, path)
     if version_match:
         full_version = version_match.group(1)
         # Extract the CMSSW version part and any suffix
-        version_match = re.search(r'(CMSSW_\d+_\d+(_\d+)*)(_(.*))?', full_version)
+        version_match = re.search(r"(CMSSW_\d+_\d+(_\d+)*)(_(.*))?", full_version)
         if version_match:
             release_cycle = version_match.group(1)
-            flavor = version_match.group(4) if version_match.group(4) else ''
+            flavor = version_match.group(4) if version_match.group(4) else ""
             release_name = f"{release_cycle}_{flavor}" if flavor else release_cycle
         else:
             release_cycle = "Not found"
-            flavor = ''
+            flavor = ""
             release_name = "Not found"
     else:
         release_cycle = "Not found"
-        flavor = ''
+        flavor = ""
         release_name = "Not found"
-    
+
     return architecture, release_name, release_cycle, flavor
 
 # Function that reads package names and versions from a JSON file
@@ -219,19 +218,21 @@ def extract_packages(package_file):
 
 def process_releases_directory(directory):
     releases_info = {}
-    
+
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith('.json'):
+            if file.endswith(".json"):
                 file_path = os.path.join(root, file)
-                
+
                 # Extract architecture, release_name, release_cycle, and flavor from path
-                architecture, release_name, release_cycle, flavor = parse_releases_path(file_path)
-                
+                architecture, release_name, release_cycle, flavor = parse_releases_path(
+                    file_path
+                )
+
                 if architecture != "Not found" and release_name != "Not found":
                     # Extract packages from JSON file
                     packages = extract_packages(file_path)
-                    
+
                     release_id = f"{release_name}_{architecture}"
 
                     current_timestamp = datetime.now().isoformat()
@@ -243,25 +244,27 @@ def process_releases_directory(directory):
                         "release_cycle": release_cycle,
                         "architecture": architecture,
                         "timestamp": current_timestamp,
-                        "packages": packages
+                        "packages": packages,
                     }
     return releases_info
 
 def process_and_index_releases_directory(directory):
     releases_info = {}
-    
+
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith('.json'):
+            if file.endswith(".json"):
                 file_path = os.path.join(root, file)
-                
+
                 # Extract architecture, release_name, release_cycle, and flavor from path
-                architecture, release_name, release_cycle, flavor = parse_releases_path(file_path)
-                
+                architecture, release_name, release_cycle, flavor = parse_releases_path(
+                    file_path
+                )
+
                 if architecture != "Not found" and release_name != "Not found":
                     # Extract packages from JSON file
                     packages = extract_packages(file_path)
-                    
+
                     release_id = f"{release_name}_{architecture}"
 
                     current_timestamp = datetime.now().isoformat()
@@ -273,7 +276,7 @@ def process_and_index_releases_directory(directory):
                         "release_cycle": release_cycle,
                         "architecture": architecture,
                         "timestamp": current_timestamp,
-                        "packages": packages
+                        "packages": packages,
                     }
                     doc = releases_info
                     resp = client.index(
@@ -293,8 +296,10 @@ def process_and_index_releases_directory(directory):
 def search_releases_index():
 
     # Perform the search query on Elasticsearch
-    response = client.search(index="cmssw-releases",size=10000,query={"match_all": {}})
-    
+    response = client.search(
+        index="cmssw-releases", size=10000, query={"match_all": {}}
+    )
+
     # Extract the hits from the responsel
     hits = response["hits"]["hits"]
     results = [hit["_source"] for hit in hits]
@@ -308,9 +313,9 @@ def search_releases_index():
 # timestamp of current time, and ID (releasecycle_flavor_date_architecture) for each release.
 # Release name and version as key/value pairs, other fields are extra labeled fields.
 # All stored in a Python dictionary
-def releases_parser():
+def IBs_parser():
     directory = "../Desktop/package-info-viewer"
-    extract_and_parse_folders(directory)
+    extract_and_parse_IBs_folders(directory)
 
 def save_to_json(data, output_file):
     with open(output_file, "w") as f:
