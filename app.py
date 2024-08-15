@@ -20,7 +20,7 @@ client.indices.put_settings(
 )
 
 # Function that parses the folder's name and saves each part in a variable
-def parse_folder_name(folder_name):
+def parse_IB_folder_name(folder_name):
     match = re.match(
         r"^(CMSSW_\d+_\d+)(_?[^_]+)?(_X)?_(\d{4}-\d{2}-\d{2}-\d{4})$", folder_name
     )
@@ -37,41 +37,21 @@ def parse_folder_name(folder_name):
     date = match.group(4)
     return version, flavor, date
 
-# Function that reads package names and versions from a JSON file
-def extract_packages(package_file):
-    with open(package_file, "r") as f:
-        package_data = json.load(f)
-
-    # Dictionary to store package name and version pairs
-    package_dict = {}
-
-    for package_key in package_data:
-        package_info = package_data[package_key]
-        package_name = package_info["name"]
-        full_version = package_info["version"]
-
-        # Split the version to remove the checksum
-        version_without_checksum = full_version.split("-")[0]
-
-        package_dict[package_name] = version_without_checksum
-
-    return package_dict
-
 # Recursive function to find the cmssw-ib.json file in deeply nested directories
 def find_cmssw_ib_file(start_dir):
     for root, dirs, files in os.walk("../Desktop/package-info-viewer"):
         for file in files:
-            if file.endswith(".json"):
+            if file.endswith("cmssw-ib.json"):
                 return os.path.join(root, file)
     return None
 
-def extract_parse_index_folders(directory):
+def extract_parse_index_IBs_folders(directory):
     result = {}  # Dictionary to hold all results
     # output_file ="ibs_summary.json"
     for item in os.listdir(directory):
         item_path = os.path.join(directory, item)
         if os.path.isdir(item_path):
-            parsed_result = parse_folder_name(item)
+            parsed_result = parse_IB_folder_name(item)
             if parsed_result:
                 version, flavor, date = parsed_result
                 for sub_item in os.listdir(item_path):
@@ -105,13 +85,13 @@ def extract_parse_index_folders(directory):
 
     return result
 
-def extract_and_parse_folders(directory):
+def extract_and_parse_IBs_folders(directory):
     result = {}  # Dictionary to hold all results
 
     for item in os.listdir(directory):
         item_path = os.path.join(directory, item)
         if os.path.isdir(item_path):
-            parsed_result = parse_folder_name(item)
+            parsed_result = parse_IB_folder_name(item)
             if parsed_result:
                 version, flavor, date = parsed_result
                 for sub_item in os.listdir(item_path):
@@ -181,7 +161,7 @@ def search_ibs_index():
 
     return jsonify(results)
 
-def parse_path(path):
+def parse_releases_path(path):
     # Extract Architecture using regex
     architecture_pattern = r'/cms/([^/]+)/'
     
@@ -216,6 +196,8 @@ def parse_path(path):
     
     return architecture, release_name, release_cycle, flavor
 
+# Function that reads package names and versions from a JSON file
+# For both IBs and Releases
 def extract_packages(package_file):
     with open(package_file, "r") as f:
         package_data = json.load(f)
@@ -235,7 +217,7 @@ def extract_packages(package_file):
 
     return package_dict
 
-def process_directory(directory):
+def process_releases_directory(directory):
     releases_info = {}
     
     for root, dirs, files in os.walk(directory):
@@ -244,7 +226,7 @@ def process_directory(directory):
                 file_path = os.path.join(root, file)
                 
                 # Extract architecture, release_name, release_cycle, and flavor from path
-                architecture, release_name, release_cycle, flavor = parse_path(file_path)
+                architecture, release_name, release_cycle, flavor = parse_releases_path(file_path)
                 
                 if architecture != "Not found" and release_name != "Not found":
                     # Extract packages from JSON file
@@ -265,7 +247,7 @@ def process_directory(directory):
                     }
     return releases_info
 
-def process_and_index_directory(directory):
+def process_and_index_releases_directory(directory):
     releases_info = {}
     
     for root, dirs, files in os.walk(directory):
@@ -274,7 +256,7 @@ def process_and_index_directory(directory):
                 file_path = os.path.join(root, file)
                 
                 # Extract architecture, release_name, release_cycle, and flavor from path
-                architecture, release_name, release_cycle, flavor = parse_path(file_path)
+                architecture, release_name, release_cycle, flavor = parse_releases_path(file_path)
                 
                 if architecture != "Not found" and release_name != "Not found":
                     # Extract packages from JSON file
@@ -326,10 +308,9 @@ def search_releases_index():
 # timestamp of current time, and ID (releasecycle_flavor_date_architecture) for each release.
 # Release name and version as key/value pairs, other fields are extra labeled fields.
 # All stored in a Python dictionary
-def parser():
+def releases_parser():
     directory = "../Desktop/package-info-viewer"
     extract_and_parse_folders(directory)
-    # extract_parse_index_folders(directory)
 
 def save_to_json(data, output_file):
     with open(output_file, "w") as f:
@@ -337,10 +318,10 @@ def save_to_json(data, output_file):
 
 if __name__ == "__main__":
     # Parse the IBs directory
-    # parser()
+    # releases_parser()
 
     # Process the releases directory
     # directory = "../Desktop/releases-pkg-info"
-    # process_and_index_directory(directory)
-    # process_directory(directory)
+    # process_and_index_releases_directory(directory)
+    # process_releases_directory(directory)
     app.run(debug=True)
