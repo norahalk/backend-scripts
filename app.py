@@ -229,7 +229,7 @@ def extract_packages(package_file):
         full_version = package_info["version"]
 
         # Split the version to remove the checksum
-        version_without_checksum = full_version.split("+")[0]
+        version_without_checksum = full_version.split("-")[0]
 
         package_dict[package_name] = version_without_checksum
 
@@ -305,6 +305,7 @@ def process_and_index_directory(directory):
                     client.indices.refresh(index="cmssw-releases")
 
     return releases_info
+
 # Function to search the releases index on ElasticSearch - query obtained from frontend POST request
 @app.route("/searchReleases", methods=["POST"])
 def search_releases_index():
@@ -336,9 +337,10 @@ def save_to_json(data, output_file):
 
 if __name__ == "__main__":
     # Parse the IBs directory
-    parser()
+    # parser()
 
     # Process the releases directory
-    directory = "../Desktop/releases-pkg-info"
-    process_directory(directory)
+    # directory = "../Desktop/releases-pkg-info"
+    # process_and_index_directory(directory)
+    # process_directory(directory)
     app.run(debug=True)
