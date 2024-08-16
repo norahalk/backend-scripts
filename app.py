@@ -19,6 +19,14 @@ client.indices.put_settings(
     body={"index.mapping.total_fields.limit": 10000},  # Increase this value as needed
 )
 
+# Update index settings
+client.indices.put_settings(
+    index="cmssw-ibs",
+    body={"index.mapping.total_fields.limit": 10000},  # Increase this value as needed
+)
+
+
+
 # Function that parses the folder's name and saves each part in a variable
 def parse_IB_folder_name(folder_name):
     match = re.match(
@@ -37,13 +45,15 @@ def parse_IB_folder_name(folder_name):
     date = match.group(4)
     return version, flavor, date
 
+
 # Recursive function to find the cmssw-ib.json file in deeply nested directories
 def find_cmssw_ib_file(start_dir):
-    for root, dirs, files in os.walk("../Desktop/package-info-viewer"):
+    for root, dirs, files in os.walk(start_dir):
         for file in files:
             if file.endswith("cmssw-ib.json"):
                 return os.path.join(root, file)
     return None
+
 
 def extract_parse_index_IBs_folders(directory):
     result = {}  # Dictionary to hold all results
@@ -76,14 +86,15 @@ def extract_parse_index_IBs_folders(directory):
                             resp = client.index(
                                 index="cmssw-ibs", id=IB_id, document=doc[IB_id]
                             )
-                            print(resp["result"])
+                            # print(resp["result"])
 
                             resp = client.get(index="cmssw-ibs", id=IB_id)
-                            print(resp["_source"])
+                            # print(resp["_source"])
 
                             client.indices.refresh(index="cmssw-ibs")
 
     return result
+
 
 def extract_and_parse_IBs_folders(directory):
     result = {}  # Dictionary to hold all results
@@ -96,8 +107,10 @@ def extract_and_parse_IBs_folders(directory):
                 version, flavor, date = parsed_result
                 for sub_item in os.listdir(item_path):
                     sub_item_path = os.path.join(item_path, sub_item)
+
                     if os.path.isdir(sub_item_path):
                         package_file = find_cmssw_ib_file(sub_item_path)
+
                         if package_file:
                             packages = extract_packages(package_file)
                             IB_id = f"{version}_{flavor}_{date}_{sub_item}"
@@ -112,7 +125,6 @@ def extract_and_parse_IBs_folders(directory):
                                 "packages": packages,
                                 "@timestamp": current_timestamp,
                             }
-
     return result
 
 # Function that takes the folders, sends them to be parsed then send them to the react frontend
@@ -144,9 +156,10 @@ def get_packages(ib, date, flavor, architecture):
         return jsonify(packages)
     return jsonify([]), 404
 
+
 # Function to search the IBs index on ElasticSearch - query obtained from frontend POST request
-@app.route("/searchIBs", methods=["POST"])
-def search_ibs_index():
+@app.route("/allIBs", methods=["POST"])
+def all_ibs_index():
 
     # Perform the search query on Elasticsearch
     response = client.search(index="cmssw-ibs", size=10000, query={"match_all": {}})
@@ -154,11 +167,12 @@ def search_ibs_index():
     # Extract the hits from the responsel
     hits = response["hits"]["hits"]
     results = [hit["_source"] for hit in hits]
-    print("Got {} hits:".format(response["hits"]["total"]["value"]))
-    for hit in response["hits"]["hits"]:
-        print("{architecture}".format(**hit["_source"]))
+    # print("Got {} hits:".format(response["hits"]["total"]["value"]))
+    # for hit in response["hits"]["hits"]:
+    #     print("{architecture}".format(**hit["_source"]))
 
     return jsonify(results)
+
 
 def parse_releases_path(path):
     # Extract Architecture using regex
@@ -203,7 +217,6 @@ def extract_packages(package_file):
 
     # Dictionary to store package name and version pairs
     package_dict = {}
-
     for package_key in package_data:
         package_info = package_data[package_key]
         package_name = package_info["name"]
@@ -215,6 +228,7 @@ def extract_packages(package_file):
         package_dict[package_name] = version_without_checksum
 
     return package_dict
+
 
 def process_releases_directory(directory):
     releases_info = {}
@@ -247,6 +261,7 @@ def process_releases_directory(directory):
                         "packages": packages,
                     }
     return releases_info
+
 
 def process_and_index_releases_directory(directory):
     releases_info = {}
@@ -291,9 +306,10 @@ def process_and_index_releases_directory(directory):
 
     return releases_info
 
+
 # Function to search the releases index on ElasticSearch - query obtained from frontend POST request
-@app.route("/searchReleases", methods=["POST"])
-def search_releases_index():
+@app.route("/allReleases", methods=["POST"])
+def all_releases_index():
 
     # Perform the search query on Elasticsearch
     response = client.search(
@@ -303,11 +319,68 @@ def search_releases_index():
     # Extract the hits from the responsel
     hits = response["hits"]["hits"]
     results = [hit["_source"] for hit in hits]
-    print("Got {} hits:".format(response["hits"]["total"]["value"]))
-    for hit in response["hits"]["hits"]:
-        print("{release_name}".format(**hit["_source"]))
+    # print("Got {} hits:".format(response["hits"]["total"]["value"]))
+    # for hit in response["hits"]["hits"]:
+    #     print("{release_name}".format(**hit["_source"]))
 
     return jsonify(results)
+
+
+@app.route("/searchIBs", methods=["POST"])
+def search_ibs_index():
+    search_data = request.json
+    package_name = search_data.get("packageName")
+    version = search_data.get("version")
+
+    # Elasticsearch query
+    query = {
+        "query": {
+            "term": {
+                f"packages.{package_name}.keyword": version
+            }
+        }
+    }
+
+    # Perform the search query on Elasticsearch
+    response = client.search(index="cmssw-ibs",size=10000, body=query)
+
+    # Extract the hits from the response
+    hits = response["hits"]["hits"]
+    results = [hit["_source"] for hit in hits]
+    # print("Got {} hits:".format(response["hits"]["total"]["value"]))
+    # for hit in response["hits"]["hits"]:
+    #     print("{architecture}".format(**hit["_source"]))
+
+    return jsonify(results)
+
+
+@app.route("/searchReleases", methods=["POST"])
+def search_releases_index():
+    search_data = request.json
+    package_name = search_data.get("packageName")
+    version = search_data.get("version")
+
+    # Elasticsearch query
+    query = {
+        "query": {
+            "term": {
+                f"packages.{package_name}.keyword": version
+            }
+        }
+    }
+
+    # Perform the search query on Elasticsearch
+    response = client.search(index="cmssw-releases",size=10000, body=query)
+
+    # Extract the hits from the response
+    hits = response["hits"]["hits"]
+    results = [hit["_source"] for hit in hits]
+    # print("Got {} hits:".format(response["hits"]["total"]["value"]))
+    # for hit in response["hits"]["hits"]:
+    #     print("{architecture}".format(**hit["_source"]))
+
+    return jsonify(results)
+
 
 # Function to create a new JSON file containing the release cycle, flavor, date, architecture, packages,
 # timestamp of current time, and ID (releasecycle_flavor_date_architecture) for each release.
@@ -315,15 +388,18 @@ def search_releases_index():
 # All stored in a Python dictionary
 def IBs_parser():
     directory = "../Desktop/package-info-viewer"
-    extract_and_parse_IBs_folders(directory)
+    extract_parse_index_IBs_folders(directory)
+    # extract_and_parse_IBs_folders(directory)
+
 
 def save_to_json(data, output_file):
     with open(output_file, "w") as f:
         json.dump(data, f, indent=4)
 
+
 if __name__ == "__main__":
     # Parse the IBs directory
-    # releases_parser()
+    IBs_parser()
 
     # Process the releases directory
     # directory = "../Desktop/releases-pkg-info"
