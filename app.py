@@ -1,7 +1,6 @@
 import os
 import re
 import json
-from collections import defaultdict
 from flask import Flask, jsonify, request
 from datetime import datetime
 from elasticsearch import Elasticsearch
