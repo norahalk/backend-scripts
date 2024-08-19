@@ -25,8 +25,6 @@ client.indices.put_settings(
     body={"index.mapping.total_fields.limit": 10000},  # Increase this value as needed
 )
 
-
-
 # Function that parses the folder's name and saves each part in a variable
 def parse_IB_folder_name(folder_name):
     match = re.match(
@@ -127,35 +125,6 @@ def extract_and_parse_IBs_folders(directory):
                             }
     return result
 
-# Function that takes the folders, sends them to be parsed then send them to the react frontend
-@app.route("/folders", methods=["GET"])
-def get_folders():
-    directory = "../Desktop/package-info-viewer"
-    parsed_folders = extract_and_parse_IBs_folders(directory)
-
-    # Organize data for easier consumption by the react.js frontend
-    data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-
-    for IB_id, details in parsed_folders.items():
-        version = details["version"]
-        flavor = details["flavor"]
-        date = details["date"]
-        architecture = details["architecture"]
-        data[version][date][flavor].append(architecture)
-
-    return jsonify(data)
-
-# Function to get the packages from the cmssw-ib JSON file for each IB
-@app.route("/packages/<ib>/<date>/<flavor>/<architecture>", methods=["GET"])
-def get_packages(ib, date, flavor, architecture):
-    directory = f"../Desktop/package-info-viewer/{ib}_{flavor}_{date}/{architecture}"
-    package_file = os.path.join(directory, "cmssw-ib.json")
-    if os.path.exists(package_file):
-        with open(package_file) as f:
-            packages = json.load(f)
-        return jsonify(packages)
-    return jsonify([]), 404
-
 
 # Function to search the IBs index on ElasticSearch - query obtained from frontend POST request
 @app.route("/allIBs", methods=["POST"])
@@ -167,9 +136,6 @@ def all_ibs_index():
     # Extract the hits from the responsel
     hits = response["hits"]["hits"]
     results = [hit["_source"] for hit in hits]
-    # print("Got {} hits:".format(response["hits"]["total"]["value"]))
-    # for hit in response["hits"]["hits"]:
-    #     print("{architecture}".format(**hit["_source"]))
 
     return jsonify(results)
 
@@ -319,90 +285,83 @@ def all_releases_index():
     # Extract the hits from the responsel
     hits = response["hits"]["hits"]
     results = [hit["_source"] for hit in hits]
-    # print("Got {} hits:".format(response["hits"]["total"]["value"]))
-    # for hit in response["hits"]["hits"]:
-    #     print("{release_name}".format(**hit["_source"]))
 
     return jsonify(results)
-
 
 @app.route("/searchIBs", methods=["POST"])
 def search_ibs_index():
     search_data = request.json
-    package_name = search_data.get("packageName")
-    version = search_data.get("version")
+    packages = search_data.get("packages", [])
 
-    # Elasticsearch query
+    # Build Elasticsearch query
+    must_clauses = []
+    for package in packages:
+        package_name = package.get("packageName")
+        version = package.get("version")
+
+        if package_name and version:
+            must_clauses.append({
+                "term": {
+                    f"packages.{package_name}.keyword": version
+                }
+            })
+
     query = {
         "query": {
-            "term": {
-                f"packages.{package_name}.keyword": version
+            "bool": {
+                "must": must_clauses
             }
         }
     }
 
     # Perform the search query on Elasticsearch
-    response = client.search(index="cmssw-ibs",size=10000, body=query)
+    response = client.search(index="cmssw-ibs", size=10000, body=query)
 
     # Extract the hits from the response
     hits = response["hits"]["hits"]
     results = [hit["_source"] for hit in hits]
-    # print("Got {} hits:".format(response["hits"]["total"]["value"]))
-    # for hit in response["hits"]["hits"]:
-    #     print("{architecture}".format(**hit["_source"]))
 
     return jsonify(results)
-
 
 @app.route("/searchReleases", methods=["POST"])
 def search_releases_index():
     search_data = request.json
-    package_name = search_data.get("packageName")
-    version = search_data.get("version")
+    packages = search_data.get("packages", [])
 
-    # Elasticsearch query
+    # Build Elasticsearch query
+    must_clauses = []
+    for package in packages:
+        package_name = package.get("packageName")
+        version = package.get("version")
+
+        if package_name and version:
+            must_clauses.append({
+                "term": {
+                    f"packages.{package_name}.keyword": version
+                }
+            })
+
     query = {
         "query": {
-            "term": {
-                f"packages.{package_name}.keyword": version
+            "bool": {
+                "must": must_clauses
             }
         }
     }
 
     # Perform the search query on Elasticsearch
-    response = client.search(index="cmssw-releases",size=10000, body=query)
+    response = client.search(index="cmssw-releases", size=10000, body=query)
 
     # Extract the hits from the response
     hits = response["hits"]["hits"]
     results = [hit["_source"] for hit in hits]
-    # print("Got {} hits:".format(response["hits"]["total"]["value"]))
-    # for hit in response["hits"]["hits"]:
-    #     print("{architecture}".format(**hit["_source"]))
 
     return jsonify(results)
-
-
-# Function to create a new JSON file containing the release cycle, flavor, date, architecture, packages,
-# timestamp of current time, and ID (releasecycle_flavor_date_architecture) for each release.
-# Release name and version as key/value pairs, other fields are extra labeled fields.
-# All stored in a Python dictionary
-def IBs_parser():
-    directory = "../Desktop/package-info-viewer"
-    extract_parse_index_IBs_folders(directory)
-    # extract_and_parse_IBs_folders(directory)
 
 
 def save_to_json(data, output_file):
     with open(output_file, "w") as f:
         json.dump(data, f, indent=4)
 
-
 if __name__ == "__main__":
-    # Parse the IBs directory
-    IBs_parser()
-
-    # Process the releases directory
-    # directory = "../Desktop/releases-pkg-info"
-    # process_and_index_releases_directory(directory)
-    # process_releases_directory(directory)
     app.run(debug=True)
