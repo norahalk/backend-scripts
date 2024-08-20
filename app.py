@@ -24,6 +24,7 @@ client.indices.put_settings(
     body={"index.mapping.total_fields.limit": 10000},  # Increase this value as needed
 )
 
+
 # Function that parses the folder's name and saves each part in a variable
 def parse_IB_folder_name(folder_name):
     match = re.match(
@@ -174,6 +175,7 @@ def parse_releases_path(path):
 
     return architecture, release_name, release_cycle, flavor
 
+
 # Function that reads package names and versions from a JSON file
 # For both IBs and Releases
 def extract_packages(package_file):
@@ -287,6 +289,7 @@ def all_releases_index():
 
     return jsonify(results)
 
+
 @app.route("/searchIBs", methods=["POST"])
 def search_ibs_index():
     search_data = request.json
@@ -299,19 +302,9 @@ def search_ibs_index():
         version = package.get("version")
 
         if package_name and version:
-            must_clauses.append({
-                "term": {
-                    f"packages.{package_name}.keyword": version
-                }
-            })
+            must_clauses.append({"term": {f"packages.{package_name}.keyword": version}})
 
-    query = {
-        "query": {
-            "bool": {
-                "must": must_clauses
-            }
-        }
-    }
+    query = {"query": {"bool": {"must": must_clauses}}}
 
     # Perform the search query on Elasticsearch
     response = client.search(index="cmssw-ibs", size=10000, body=query)
@@ -321,6 +314,7 @@ def search_ibs_index():
     results = [hit["_source"] for hit in hits]
 
     return jsonify(results)
+
 
 @app.route("/searchReleases", methods=["POST"])
 def search_releases_index():
@@ -334,19 +328,9 @@ def search_releases_index():
         version = package.get("version")
 
         if package_name and version:
-            must_clauses.append({
-                "term": {
-                    f"packages.{package_name}.keyword": version
-                }
-            })
+            must_clauses.append({"term": {f"packages.{package_name}.keyword": version}})
 
-    query = {
-        "query": {
-            "bool": {
-                "must": must_clauses
-            }
-        }
-    }
+    query = {"query": {"bool": {"must": must_clauses}}}
 
     # Perform the search query on Elasticsearch
     response = client.search(index="cmssw-releases", size=10000, body=query)
@@ -358,9 +342,40 @@ def search_releases_index():
     return jsonify(results)
 
 
+@app.route("/searchPackages", methods=["POST"])
+def get_packages():
+    search_data = request.json
+    version = search_data.get("version")
+    date = search_data.get("date")
+    flavor = search_data.get("flavor")
+    architecture = search_data.get("architecture")
+
+    # Perform the search query on Elasticsearch
+    query = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"match": {"version": f"{version}"}},
+                    {"match": {"date": f"{date}"}},
+                    {"match": {"flavor": f"{flavor}"}},
+                    {"match": {"architecture": f"{architecture}"}},
+                ]
+            }
+        }
+    }
+    response = client.search(index="cmssw-ibs", size=10000, body=query)
+
+    # Extract the hits from the responsel
+    hits = response["hits"]["hits"]
+    results = [hit["_source"] for hit in hits]
+
+    return jsonify(results)
+
+
 def save_to_json(data, output_file):
     with open(output_file, "w") as f:
         json.dump(data, f, indent=4)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
