@@ -369,7 +369,7 @@ def get_packages():
     hits = response["hits"]["hits"]
     results = [hit["_source"] for hit in hits]
 
-    return jsonify(results)
+    return jsonify(results[0])
 
 
 def save_to_json(data, output_file):
