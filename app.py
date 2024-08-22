@@ -289,7 +289,6 @@ def all_releases_index():
 
     return jsonify(results)
 
-
 @app.route("/searchIBs", methods=["POST"])
 def search_ibs_index():
     search_data = request.json
@@ -302,7 +301,7 @@ def search_ibs_index():
         version = package.get("version")
 
         if package_name and version:
-            must_clauses.append({"term": {f"packages.{package_name}.keyword": version}})
+            must_clauses.append({"wildcard": {f"packages.{package_name}.keyword": version}})
 
     query = {"query": {"bool": {"must": must_clauses}}}
 
@@ -314,7 +313,6 @@ def search_ibs_index():
     results = [hit["_source"] for hit in hits]
 
     return jsonify(results)
-
 
 @app.route("/searchReleases", methods=["POST"])
 def search_releases_index():
@@ -328,7 +326,7 @@ def search_releases_index():
         version = package.get("version")
 
         if package_name and version:
-            must_clauses.append({"term": {f"packages.{package_name}.keyword": version}})
+            must_clauses.append({"wildcard": {f"packages.{package_name}.keyword": version}})
 
     query = {"query": {"bool": {"must": must_clauses}}}
 
