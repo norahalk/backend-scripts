@@ -342,8 +342,8 @@ def search_releases_index():
     return jsonify(results)
 
 
-@app.route("/searchPackages", methods=["POST"])
-def get_packages():
+@app.route("/searchIBsPackages", methods=["POST"])
+def get_ibs_packages():
     search_data = request.json
     version = search_data.get("version")
     date = search_data.get("date")
@@ -365,11 +365,44 @@ def get_packages():
     }
     response = client.search(index="cmssw-ibs", size=10000, body=query)
 
-    # Extract the hits from the responsel
+    # Extract the hits from the response
     hits = response["hits"]["hits"]
-    results = [hit["_source"] for hit in hits]
+    if hits:
+        # Assuming the first hit is the correct one
+        packages = hits[0]["_source"].get("packages", {})
+        return jsonify(packages)
+    else:
+        return jsonify({})  # Return an empty dictionary if no results found
 
-    return jsonify(results[0])
+
+@app.route("/searchReleasesPackages", methods=["POST"])
+def get_releases_packages():
+    search_data = request.json
+    release_name = search_data.get("release_name")
+
+    # Perform the search query on Elasticsearch
+    query = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"match": {"release_name": f"{release_name}"}}
+                ]
+            }
+        }
+    }
+    response = client.search(index="cmssw-releases", size=10000, body=query)
+
+    # Extract the hits from the response
+    hits = response["hits"]["hits"]
+    if hits:
+        # Assuming the first hit is the correct one
+        packages = hits[0]["_source"].get("packages", {})
+        return jsonify(packages)
+    else:
+        return jsonify({})  # Return an empty dictionary if no results found
+
+if __name__ == "__main__":
+    app.run(debug=True)
 
 
 def save_to_json(data, output_file):
